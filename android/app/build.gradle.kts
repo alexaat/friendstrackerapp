@@ -7,7 +7,8 @@ plugins {
 
 android {
     namespace = "com.alexaat.friendstrackerapp"
-    compileSdk = 34
+    //compileSdk = 34
+    compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -30,11 +31,21 @@ android {
         versionName = flutter.versionName
     }
 
+//    signingConfigs{
+//        debug {
+//            keyAlias = 'androiddebugkey'
+//            keyPassword = 'android'
+//            storeFile file('mykey.jks')
+//            storePassword = 'android'
+//        }
+//    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            //signingConfig signingConfigs.debug
         }
     }
 }

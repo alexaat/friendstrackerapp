@@ -20,8 +20,6 @@ class _SignInState extends ConsumerState<SignIn> {
     final googleUser = await GoogleSignInApi.login();
     final GoogleSignInAuthentication? googleAuth = await googleUser?.authentication;
     final accessToken = googleAuth?.accessToken;
-    print('TOKEN');
-    print(accessToken);
     if(googleUser == null || googleAuth == null || accessToken == null){
       if(mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sign in failed')));

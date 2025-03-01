@@ -7,9 +7,6 @@ class CurrentUserNotifier extends Notifier<User?>{
     return null;
   }
   void setCurrentUser(User user){
-    print('Current User:');
-    print(user.name);
-    print(user.accessToken);
     state = user;
   }
 }
