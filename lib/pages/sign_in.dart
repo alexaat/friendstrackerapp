@@ -32,20 +32,6 @@ class _SignInState extends ConsumerState<SignIn> {
             Navigator.of(context).pushReplacement(MaterialPageRoute(
                 builder: (context) => const Home()));
           }
-        // KaquizApi.getFriends(accessToken)
-        //     .then((friends) {
-        //   ref.read(friendsNotifierProvider.notifier).setFriends(friends ?? []);
-        //   if(mounted){
-        //     Navigator.of(context).pushReplacement(MaterialPageRoute(
-        //         builder: (context) => const Home()));
-        //   }
-        // })
-        //     .onError((Object error, StackTrace stackTrace){
-        //   print('ERROR: $error');
-        //   if(mounted) {
-        //     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sign in failed: $error')));
-        //   }
-        // });
       }).onError((Object error, StackTrace stackTrace){
         print('ERROR: $error');
         if(mounted) {
@@ -54,7 +40,6 @@ class _SignInState extends ConsumerState<SignIn> {
       });
     }
   }
-
 
   void configHandler() {
     Navigator.of(context).push(MaterialPageRoute(
