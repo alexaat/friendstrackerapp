@@ -10,7 +10,7 @@ import 'package:friendstrackerapp/models/user.dart';
 import 'package:friendstrackerapp/providers/current_user_provider.dart';
 import 'package:friendstrackerapp/pages/details.dart';
 import 'package:location/location.dart' as flutter_location;
-import '../models/locations.dart';
+import 'package:friendstrackerapp/models/locations.dart';
 
 class Home extends ConsumerStatefulWidget {
   const Home({super.key});
@@ -18,8 +18,9 @@ class Home extends ConsumerStatefulWidget {
   ConsumerState<Home> createState() => _HomeState();
 }
 class _HomeState extends ConsumerState<Home> {
+  bool _friendsLoadComplete = false;
   Timer? timer;
-  Timer? refreshFriendsTimer;
+  //Timer? refreshFriendsTimer;
   final flutter_location.Location location = flutter_location.Location();
   late bool _serviceEnabled;
   late flutter_location.PermissionStatus _permissionGranted;
@@ -98,22 +99,31 @@ class _HomeState extends ConsumerState<Home> {
       _searchController.text = '';
     });
   }
-  void refreshFriends(){
-    FriendsTrackerApi.getFriends(currentUser!.accessToken)
-        .then((friends) {
+
+  //load friends
+  void getFriends(String? accessToken) async {
+    FriendsTrackerApi.getFriends(accessToken).then((friends) {
+      setState(() {
+        _friendsLoadComplete = true;
+      });
       ref.read(friendsNotifierProvider.notifier).setFriends(friends ?? []);
-    })
-        .onError((Object error, StackTrace stackTrace) {
+    }).onError((Object error, StackTrace stackTrace){
+      print('ERROR: $error');
       if(mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sign in failed: $error')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not fetch friends: $error')));
       }
     });
   }
 
   @override
   Widget build(BuildContext context){
+
     currentUser = ref.watch(currentUserNotifierProvider);
+    if (!_friendsLoadComplete) {
+      getFriends(currentUser?.accessToken);
+    }
     friends = ref.watch(friendsNotifierProvider);
+
     checkPermissions();
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -268,14 +278,14 @@ class _HomeState extends ConsumerState<Home> {
   void initState() {
     _searchController.text = '';
     timer = Timer.periodic(const Duration(seconds: 5), (Timer t) =>  updateLocation());
-    refreshFriendsTimer = Timer.periodic(const Duration(seconds: 5), (Timer t) =>  refreshFriends());
+    //refreshFriendsTimer = Timer.periodic(const Duration(seconds: 5), (Timer t) =>  refreshFriends());
     super.initState();
   }
   @override
   void dispose() {
     _searchController.dispose();
     timer?.cancel();
-    refreshFriendsTimer?.cancel();
+    //refreshFriendsTimer?.cancel();
     super.dispose();
   }
 }

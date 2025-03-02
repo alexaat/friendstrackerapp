@@ -7,18 +7,21 @@ import 'package:friendstrackerapp/providers/current_user_provider.dart';
 import 'package:friendstrackerapp/providers/friends_provider.dart';
 import 'package:friendstrackerapp/components/menu_item.dart';
 import 'package:badges/badges.dart' as badges;
+import 'package:friendstrackerapp/models/invites.dart';
+import 'package:friendstrackerapp/providers/invites_provider.dart';
 
 class AwaitingUsersMenu extends ConsumerStatefulWidget {
   const AwaitingUsersMenu({super.key});
   @override
   ConsumerState<AwaitingUsersMenu> createState() => _AwaitingUsersMenuState();
 }
+
 class _AwaitingUsersMenuState extends ConsumerState<AwaitingUsersMenu> {
   final FocusNode _buttonFocusNode = FocusNode(debugLabel: 'Menu Button');
   User? currentUser;
+  Invites? invites;
   List<Widget>? children;
   MenuController? _controller;
-  Timer? updateChildrenTimer;
   void acceptHandler(id) async {
     _controller?.close();
     FriendsTrackerApi.acceptInvite(currentUser!.accessToken, id)
@@ -56,45 +59,53 @@ class _AwaitingUsersMenuState extends ConsumerState<AwaitingUsersMenu> {
       }
     });
   }
-  void getAwaitingChildren(){
-    FriendsTrackerApi.getInvites(currentUser!.accessToken, currentUser!.id)
-        .then((invites) {
-      List<User> awaiting = invites.incoming?.map((item) => User(id: item.sender.id, name: item.sender.name, email: '', avatar: item.sender.avatar, status: Status.awaiting)).toList() ?? [];
-      List<Widget> childrenLocal = [];
-      for (var user in awaiting) {
-        Widget child = MenuItem(user, onCloseCallback, acceptHandler, declineHandler);
-        childrenLocal.add(child);
-      }
+
+  bool _invitesLoadComplete = false;
+
+  void getInvites(String accessToken, int userId) async {
+    FriendsTrackerApi.getInvites(accessToken, userId).then((invites) {
       setState(() {
-        children = childrenLocal;
+        _invitesLoadComplete = true;
       });
-    })
-        .onError((Object error, StackTrace stackTrace) {
+      ref.read(invitesNotifierProvider.notifier).setInvites(invites);
+    }).onError((Object error, StackTrace stackTrace) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Could not get invites from database: $error')));
       }
     });
   }
-  @override
-  void initState() {
-    updateChildrenTimer = Timer.periodic(const Duration(seconds: 5), (Timer t) =>  getAwaitingChildren());
-    super.initState();
+
+  void buildChildren(Invites invites){
+    List<User> awaiting = invites.incoming?.map((item) => User(id: item.sender.id, name: item.sender.name, email: '', avatar: item.sender.avatar, status: Status.awaiting)).toList() ?? [];
+    List<Widget> childrenLocal = [];
+    for (var user in awaiting) {
+      Widget child = MenuItem(user, onCloseCallback, acceptHandler, declineHandler);
+      childrenLocal.add(child);
+    }
+    setState(() {
+      children = childrenLocal;
+    });
   }
+
   @override
   void dispose() {
     _buttonFocusNode.dispose();
-    updateChildrenTimer?.cancel();
     super.dispose();
   }
   void onCloseCallback() {
     _controller?.close();
   }
+
   @override
   Widget build(BuildContext context) {
     currentUser = ref.watch(currentUserNotifierProvider);
-    if(children == null){
-      getAwaitingChildren();
+    invites = ref.watch(invitesNotifierProvider);
+    if (!_invitesLoadComplete) {
+      getInvites(currentUser!.accessToken!, currentUser!.id);
+    }
+    if(invites != null) {
+      buildChildren(invites!);
     }
     return MenuAnchor(
       childFocusNode: _buttonFocusNode,
