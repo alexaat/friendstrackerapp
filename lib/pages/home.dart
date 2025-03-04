@@ -11,7 +11,6 @@ import 'package:friendstrackerapp/providers/current_user_provider.dart';
 import 'package:friendstrackerapp/pages/details.dart';
 import 'package:location/location.dart' as flutter_location;
 import 'package:friendstrackerapp/models/locations.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 
 class Home extends ConsumerStatefulWidget {
   const Home({super.key});
@@ -21,6 +20,7 @@ class Home extends ConsumerStatefulWidget {
 class _HomeState extends ConsumerState<Home> {
   bool _friendsLoadComplete = false;
   Timer? timer;
+  Timer? refreshFriendsTimer;
   final flutter_location.Location location = flutter_location.Location();
   late bool _serviceEnabled;
   late flutter_location.PermissionStatus _permissionGranted;
@@ -106,23 +106,19 @@ class _HomeState extends ConsumerState<Home> {
       });
       ref.read(friendsNotifierProvider.notifier).setFriends(friends ?? []);
     }).onError((Object error, StackTrace stackTrace){
-      print('ERROR: $error');
       if(mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not fetch friends: $error')));
       }
     });
   }
-
-  void setUpWS() async {
-    final wsUrl = Uri.parse(await FriendsTrackerApi.getWSUrl());
-    final channel = WebSocketChannel.connect(wsUrl);
-    await channel.ready;
-    channel.stream.listen((message) {
-      //ref.read(friendsNotifierProvider.notifier).setFriends(friends ?? []);
-      print('MESSAGE:');
-      print(message);
+  void refreshFriends(){
+    FriendsTrackerApi.getFriends(currentUser!.accessToken).then((friends) {
+      ref.read(friendsNotifierProvider.notifier).setFriends(friends ?? []);
+    }).onError((Object error, StackTrace stackTrace) {
+      if(mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sign in failed: $error')));
+      }
     });
-
   }
 
   @override
@@ -286,15 +282,16 @@ class _HomeState extends ConsumerState<Home> {
   }
   @override
   void initState() {
-    setUpWS();
     _searchController.text = '';
     timer = Timer.periodic(const Duration(seconds: 5), (Timer t) =>  updateLocation());
+    refreshFriendsTimer = Timer.periodic(const Duration(seconds: 5), (Timer t) =>  refreshFriends());
     super.initState();
   }
   @override
   void dispose() {
     _searchController.dispose();
     timer?.cancel();
+    refreshFriendsTimer?.cancel();
     super.dispose();
   }
 }

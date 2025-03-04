@@ -22,6 +22,8 @@ class _AwaitingUsersMenuState extends ConsumerState<AwaitingUsersMenu> {
   Invites? invites;
   List<Widget>? children;
   MenuController? _controller;
+  Timer? updateInvitesTimer;
+
   void acceptHandler(id) async {
     _controller?.close();
     FriendsTrackerApi.acceptInvite(currentUser!.accessToken, id)
@@ -62,7 +64,7 @@ class _AwaitingUsersMenuState extends ConsumerState<AwaitingUsersMenu> {
 
   bool _invitesLoadComplete = false;
 
-  void getInvites(String accessToken, int userId) async {
+  Future<void> getInvites(String accessToken, int userId) async {
     FriendsTrackerApi.getInvites(accessToken, userId).then((invites) {
       setState(() {
         _invitesLoadComplete = true;
@@ -89,8 +91,21 @@ class _AwaitingUsersMenuState extends ConsumerState<AwaitingUsersMenu> {
   }
 
   @override
+  void initState() {
+    updateInvitesTimer = Timer.periodic(const Duration(seconds: 5), (Timer t) async {
+        await getInvites(currentUser!.accessToken!, currentUser!.id);
+        invites = ref.watch(invitesNotifierProvider);
+        if(invites != null) {
+          buildChildren(invites!);
+        }
+    });
+    super.initState();
+  }
+
+  @override
   void dispose() {
     _buttonFocusNode.dispose();
+    updateInvitesTimer?.cancel();
     super.dispose();
   }
   void onCloseCallback() {
