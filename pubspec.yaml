@@ -44,6 +44,8 @@ dependencies:
   flutter_riverpod: ^2.6.1
   timeago: ^3.7.0
 
+dependency_overrides:
+  google_maps_flutter_ios: 2.13.1
 
 dev_dependencies:
   flutter_test:
