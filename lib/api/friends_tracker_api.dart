@@ -16,13 +16,6 @@ class FriendsTrackerApi {
     return "http://$ip:$port/";
   }
 
-  static Future<String> getWSUrl() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String ip = prefs.getString(IP) ?? defaultIP;
-    final String port = prefs.getString(PORT) ?? defaultPort;
-    return "ws://$ip:$port/";
-  }
-
   static Future<List<User>?> getFriends(token) async{
     String domain = await getDomain();
     Uri url = Uri.parse("${domain}friends");

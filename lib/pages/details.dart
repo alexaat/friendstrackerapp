@@ -187,8 +187,11 @@ class _DetailsState extends ConsumerState<Details> {
                 ),
                 title: Text(user?.name ?? widget.user.name)
             ),
-            body: Center(
+            body: Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(horizontal: 36.0, vertical: 36.0),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   const SizedBox(height: 150),
@@ -237,7 +240,13 @@ class _DetailsState extends ConsumerState<Details> {
                                     if(user?.location?.title != null)
                                       const SizedBox(height: 8),
                                     if(user?.location?.title != null)
-                                      Text('${user?.location?.title}'),
+                                      Text(
+                                          '${user?.location?.title}',
+                                          textAlign: TextAlign.center,
+                                          softWrap: true,
+
+
+                                      ),
                                     const SizedBox(height: 8),
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.center,
