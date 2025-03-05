@@ -117,10 +117,24 @@ class _DetailsState extends ConsumerState<Details> {
         List<User> friendsList = list.where((u) => u.id == user?.id).toList();
         if(friendsList .isNotEmpty){
           User friend = friendsList[0];
-          setState(() {
-            user = friend;
-            user?.status = Status.approved;
-          });
+          final location = friend.location;
+          if(location != null){
+            double lat = double.parse(location.latitude);
+            double lng = double.parse(location.longitude);
+            GeoCode.coordinatesToPlace(lat, lng, (Placemark placeMark) {
+              String place = GeoCode.parsePlace(placeMark);
+              friend.location?.title = place;
+              setState(() {
+                user = friend;
+                user?.status = Status.approved;
+              });
+            });
+          } else {
+            setState(() {
+              user = friend;
+              user?.status = Status.approved;
+            });
+          }
         }
       }
   }
