@@ -11,6 +11,8 @@ import 'package:friendstrackerapp/models/user.dart';
 import 'package:friendstrackerapp/providers/friends_provider.dart';
 import 'package:friendstrackerapp/pages/map.dart' as location_map;
 
+import '../utils/time.dart';
+
 class Details extends ConsumerStatefulWidget {
   const Details({super.key, required this.user});
   final User user;
@@ -20,15 +22,21 @@ class Details extends ConsumerStatefulWidget {
 class _DetailsState extends ConsumerState<Details> {
   User? currentUser;
   User? user;
+  bool _dataLoading = true;
 
   List<User>? friends;
   Future findUser(String accessToken, int id) async {
     try {
       User? u = await FriendsTrackerApi.findUser(accessToken, id);
+      setState(() {
+        _dataLoading = false;
+      });
+
       if (u == null) {
         user = null;
         return;
       }
+
       u.status = Status.free;
       List<User> list = friends?.where((friend) => friend.id == u.id)
           .toList() ?? [];
@@ -139,6 +147,7 @@ class _DetailsState extends ConsumerState<Details> {
     Navigator.of(context).push(MaterialPageRoute(
         builder: (context) => location_map.Map(friend)));
   }
+
   @override
   Widget build(BuildContext context) {
     currentUser = ref.watch(currentUserNotifierProvider);
@@ -185,61 +194,83 @@ class _DetailsState extends ConsumerState<Details> {
                   const SizedBox(height: 150),
                   Avatar(user: user ?? widget.user),
                   const SizedBox(height: 16),
-                  Text(user?.name ?? widget.user.name),
+                  Text(
+                    user?.name ?? widget.user.name,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold
+                    )),
                   const SizedBox(height: 16),
-                  if(user?.status == Status.pending)
-                    const Text('Pending Approval'),
-                  if(user?.status == Status.awaiting)
-                    Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          IconButton(onPressed: acceptHandler, icon: Icon(Icons.check, color: Colors.teal.shade300)),
-                          const SizedBox(width: 16),
-                          IconButton(onPressed: declineHandler, icon: Icon(Icons.close, color: Colors.pink.shade300)),
-                        ]
-                    ),
-                  if(user?.status == Status.approved)
+                  _dataLoading ?
+                    CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation(Colors.teal),
+                    )
+                  :
                     Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('Location'),
-                        const SizedBox(height: 8),
-                        Text(user?.location == null ? 'Unknown' :'${user?.location?.latitude}, ${user?.location?.latitude}'),
-                        if(user?.location != null)
+                        if(user?.status == Status.pending)
+                          const Text('Pending Approval'),
+                        if(user?.status == Status.awaiting)
+                          Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                IconButton(onPressed: acceptHandler, icon: Icon(Icons.check, color: Colors.teal.shade300)),
+                                const SizedBox(width: 16),
+                                IconButton(onPressed: declineHandler, icon: Icon(Icons.close, color: Colors.pink.shade300)),
+                              ]
+                          ),
+                        if(user?.status == Status.approved)
                           Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              if(user?.location?.title != null)
-                                const SizedBox(height: 8),
-                              if(user?.location?.title != null)
-                                Text('${user?.location?.title}'),
+                              const Text(
+                                  'Location',
+                                  style: TextStyle(fontWeight: FontWeight.bold)
+                              ),
                               const SizedBox(height: 8),
-                              const Text('Updated'),
-                              const SizedBox(height: 8),
-                              Text('${user?.location?.timestamp}'),
-                              const SizedBox(height: 8),
-                              IconButton(onPressed: () {
-                                if(user!=null && user?.location != null){
-                                  showMapHandler();
-                                }
-                              }, icon: const Icon(Icons.map))
+                              Text(user?.location == null ? 'Unknown' :'${user?.location?.latitude}, ${user?.location?.latitude}'),
+                              if(user?.location != null)
+                                Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    if(user?.location?.title != null)
+                                      const SizedBox(height: 8),
+                                    if(user?.location?.title != null)
+                                      Text('${user?.location?.title}'),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text('Updated: ',  style: TextStyle(fontWeight: FontWeight.bold)),
+                                        Text(Time.timeToPeriod(user?.location?.timestamp)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    IconButton(onPressed: () {
+                                      if(user!=null && user?.location != null){
+                                        showMapHandler();
+                                      }
+                                    }, icon: const Icon(Icons.map))
+                                  ],
+                                )
                             ],
-                          )
-                      ],
-                    ),
-                  if(user?.status == Status.free)
-                    ElevatedButton.icon(
-                        onPressed: inviteHandler,
-                        label: const Text(
-                          'Invite',
-                          style: TextStyle(
-                              color: Colors.teal
                           ),
-                        ),
-                        icon: const Icon(
-                            Icons.person_add,
-                            color: Colors.teal
-                        ))
+                        if(user?.status == Status.free)
+                          ElevatedButton.icon(
+                              onPressed: inviteHandler,
+                              label: const Text(
+                                'Invite',
+                                style: TextStyle(
+                                    color: Colors.teal
+                                ),
+                              ),
+                              icon: const Icon(
+                                  Icons.person_add,
+                                  color: Colors.teal
+                              ))
+                      ]
+                  )
                 ],
               ),
             )

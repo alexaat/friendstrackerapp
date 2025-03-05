@@ -14,11 +14,23 @@ class Avatar extends StatelessWidget {
         color: Colors.teal.shade600
     );
     if(user == null){
-      return CircleAvatar(
-          radius: radius,
-          backgroundImage: null,
-          backgroundColor: Colors.white
-      );
+      return Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                    blurRadius: 1,
+                    color: Colors.grey.shade300,
+                    spreadRadius: 1)
+              ],
+            ),
+            child: CircleAvatar(
+              radius: radius,
+              backgroundImage: null,
+              backgroundColor: Colors.white
+            )
+        );
     }
     //get initials
     String initials = '';
@@ -33,29 +45,54 @@ class Avatar extends StatelessWidget {
       }
     }
     if(user!.avatar == null){
-      return CircleAvatar(
-        radius: radius,
-        backgroundImage: null,
-        backgroundColor: Colors.white,
-        child: Text(initials, style: textStyle),
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+                blurRadius: 1,
+                color: Colors.grey.shade300,
+                spreadRadius: 1)
+          ],
+        ),
+        child:
+          CircleAvatar(
+          radius: radius,
+          backgroundImage: null,
+          backgroundColor: Colors.white,
+          child: Text(initials, style: textStyle)
+        )
       );
     }
-    return CircleAvatar(
-        radius: radius,
-        backgroundColor: Colors.white,
-        child: CachedNetworkImage(
-          imageUrl: user!.avatar!,
-          imageBuilder: (context, imageProvider) => Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.all(Radius.circular(radius)),
-              image: DecorationImage(
-                image: imageProvider,
-                fit: BoxFit.cover,
+    return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+                blurRadius: 1,
+                color: Colors.grey.shade300,
+                spreadRadius: 1)
+          ],
+        ),
+        child: CircleAvatar(
+            radius: radius,
+            backgroundColor: Colors.white,
+            child: CachedNetworkImage(
+              imageUrl: user!.avatar!,
+              imageBuilder: (context, imageProvider) => Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.all(Radius.circular(radius)),
+                  image: DecorationImage(
+                    image: imageProvider,
+                    fit: BoxFit.cover,
+                  ),
+                ),
               ),
-            ),
-          ),
-          errorWidget: (context, url, error) => Text(initials, style: textStyle),
+              errorWidget: (context, url, error) => Text(initials, style: textStyle),
+            )
         )
-    );
+      );
   }
 }
