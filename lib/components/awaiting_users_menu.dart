@@ -26,22 +26,36 @@ class _AwaitingUsersMenuState extends ConsumerState<AwaitingUsersMenu> {
 
   void acceptHandler(id) async {
     _controller?.close();
-    FriendsTrackerApi.acceptInvite(currentUser!.accessToken, id)
-        .then((_){
-      FriendsTrackerApi.getFriends(currentUser!.accessToken)
-          .then((friends) {
+
+    if (invites != null){
+      List<Incoming>? incoming = invites?.incoming;
+      if (incoming != null && incoming.isNotEmpty){
+        // update friends list locally
+        List<Incoming> incomingFriend = incoming.where((inc) =>  inc.sender.id == id).toList();
+        Person sender = incomingFriend[0].sender;
+        User friend = User(id: sender.id, name: sender.name, email: '');
+        List<User> friends = ref.watch(friendsNotifierProvider);
+        friends.add(friend);
+        ref.read(friendsNotifierProvider.notifier).setFriends(friends);
+        // update invites list locally
+        List<Incoming> filtered = incoming.where((inc) => inc.sender.id != id).toList();
+        invites!.incoming = filtered;
+        ref.read(invitesNotifierProvider.notifier).setInvites(invites!);
+      }
+    }
+
+    FriendsTrackerApi.acceptInvite(currentUser!.accessToken, id).then((_){
+      FriendsTrackerApi.getFriends(currentUser!.accessToken).then((friends) {
         ref.read(friendsNotifierProvider.notifier).setFriends(friends ?? []);
         setState(() {
           children = null;
         });
-      })
-          .onError((Object error, StackTrace stackTrace){
+      }).onError((Object error, StackTrace stackTrace){
         if(mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not get friends from database: $error')));
         }
       });
-    })
-        .onError((Object error, StackTrace stackTrace){
+    }).onError((Object error, StackTrace stackTrace){
       if(mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not write to database: $error')));
       }
@@ -49,13 +63,20 @@ class _AwaitingUsersMenuState extends ConsumerState<AwaitingUsersMenu> {
   }
   void declineHandler(id){
     _controller?.close();
-    FriendsTrackerApi.declineInvite(currentUser?.accessToken, id)
-        .then((_) {
+    //update invites locally
+    if (invites != null){
+      List<Incoming>? incoming = invites!.incoming;
+      if (incoming != null) {
+        List<Incoming> filtered = incoming.where((inc) => inc.sender.id != id).toList();
+        invites!.incoming = filtered;
+        ref.read(invitesNotifierProvider.notifier).setInvites(invites!);
+      }
+    }
+    FriendsTrackerApi.declineInvite(currentUser?.accessToken, id).then((_) {
       setState(() {
         children = null;
       });
-    })
-        .onError((Object error, StackTrace stackTrace){
+    }).onError((Object error, StackTrace stackTrace){
       if(mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not write to database: $error')));
       }

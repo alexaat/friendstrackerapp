@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:friendstrackerapp/api/friends_tracker_api.dart';
+import 'package:friendstrackerapp/providers/invites_provider.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:friendstrackerapp/providers/current_user_provider.dart';
 import 'package:friendstrackerapp/utils/geocode.dart';
@@ -35,16 +36,15 @@ class _DetailsState extends ConsumerState<Details> {
         u.status = Status.approved;
         u.location = list[0].location;
       } else {
-        //2. check that waiting approval by current user (incoming)
-        Invites invites = await FriendsTrackerApi.getInvites(
-            accessToken, currentUser?.id);
-        List<Incoming> filtered = invites.incoming?.where((item) => item.sender.id == u.id)
+        // check that waiting approval by current user (incoming)
+        Invites? invites = ref.watch(invitesNotifierProvider);
+        List<Incoming> filtered = invites?.incoming?.where((item) => item.sender.id == u.id)
             .toList() ?? [];
         if (filtered.isNotEmpty) {
           u.status = Status.awaiting;
         } else {
-          //3. check that current user waiting approval by user (outgoing)
-          List<Outgoing> filtered = invites.outgoing?.where((item) =>
+          // check that current user waiting approval by user (outgoing)
+          List<Outgoing> filtered = invites?.outgoing?.where((item) =>
           item.recipient.id == u.id).toList() ?? [];
           if (filtered.isNotEmpty) {
             u.status = Status.pending;
@@ -73,30 +73,66 @@ class _DetailsState extends ConsumerState<Details> {
     }
   }
   void inviteHandler() async{
-    if(user != null && currentUser != null){
-      await FriendsTrackerApi.sendInvite(currentUser!.accessToken, user!.id);
       setState(() {
-        user = null;
+        user?.status = Status.pending;
       });
-    }
+      await FriendsTrackerApi.sendInvite(currentUser?.accessToken, user?.id);
   }
   void acceptHandler() async {
-    if(user != null && currentUser != null){
-      await FriendsTrackerApi.acceptInvite(currentUser!.accessToken, user!.id);
-      List<User>? list = await FriendsTrackerApi.getFriends(currentUser!.accessToken);
-      setState(() {
-        ref.read(friendsNotifierProvider.notifier).setFriends(list ?? []);
-        user = null;
-      });
-    }
+      Invites? invites = ref.watch(invitesNotifierProvider);
+      if (invites != null){
+        List<Incoming>? incoming = invites.incoming;
+        if (incoming != null && incoming.isNotEmpty){
+          // update friends list locally
+          List<Incoming> incomingFriend = incoming.where((inc) =>  inc.sender.id == user?.id).toList();
+          Person sender = incomingFriend[0].sender;
+          User friend = User(id: sender.id, name: sender.name, email: '');
+          List<User> friends = ref.watch(friendsNotifierProvider);
+          friends.add(friend);
+          ref.read(friendsNotifierProvider.notifier).setFriends(friends);
+          // update invites list locally
+          List<Incoming> filtered = incoming.where((inc) => inc.sender.id != user?.id).toList();
+          invites.incoming = filtered;
+          ref.read(invitesNotifierProvider.notifier).setInvites(invites);
+        }
+        //update user locally
+        setState(() {
+          user?.status = Status.approved;
+        });
+      }
+      //update remotely
+      await FriendsTrackerApi.acceptInvite(currentUser?.accessToken, user?.id);
+      List<User>? list = await FriendsTrackerApi.getFriends(currentUser?.accessToken);
+      ref.read(friendsNotifierProvider.notifier).setFriends(list ?? []);
+      //update local with details
+      if (list != null && list.isNotEmpty){
+        List<User> friendsList = list.where((u) => u.id == user?.id).toList();
+        if(friendsList .isNotEmpty){
+          User friend = friendsList[0];
+          setState(() {
+            user = friend;
+            user?.status = Status.approved;
+          });
+        }
+      }
   }
   void declineHandler() async {
-    if(user != null && currentUser != null){
-      await FriendsTrackerApi.declineInvite(currentUser!.accessToken, user!.id);
+      //update invites locally
+      Invites? invites = ref.watch(invitesNotifierProvider);
+      if (invites != null){
+        List<Incoming>? incoming = invites.incoming;
+        if (incoming != null) {
+          List<Incoming> filtered = incoming.where((inc) => inc.sender.id != user?.id).toList();
+          invites.incoming = filtered;
+          ref.read(invitesNotifierProvider.notifier).setInvites(invites);
+        }
+      }
+      //update user list locally
       setState(() {
-        user = null;
+        user!.status = Status.free;
       });
-    }
+      // update remote
+      await FriendsTrackerApi.declineInvite(currentUser?.accessToken, user?.id);
   }
   void showMapHandler() {
     final friend = User(id: user!.id, name: user!.name, email: user!.email, location: user!.location);

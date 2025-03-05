@@ -81,13 +81,13 @@ class _HomeState extends ConsumerState<Home> {
     });
   }
   void tapHandler(User user) {
-    Navigator.of(context).push(MaterialPageRoute(
-        builder: (context) => Details(user: user)));
     setState(() {
       _suggestions = [];
       _searchFieldDisplayed = false;
       _searchController.text = '';
     });
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (context) => Details(user: user)));
   }
   void deleteHandler(id) {
     FriendsTrackerApi.deleteFriend(currentUser!.accessToken, id);
